@@ -1,0 +1,48 @@
+[
+    {
+        "interface": ":8080",
+        "upstreams": [
+            {
+                "path": "/example1",
+                "methods": "GET",
+                "backends": [
+                    "http://172.17.0.2/",
+                    "http://172.17.0.3/"
+                ],
+                "proxyMethod": "round-robin"
+            },
+            {
+                "path": "/example2",
+                "methods": "GET",
+                "backends": [
+                    "http://172.17.0.4/",
+                    "http://172.17.0.5/"
+                ],
+                "proxyMethod": "anycast"
+            }
+        ]
+    },
+    {
+        "interface": ":8081",
+        "upstreams": [
+            {
+                "path": "/example1",
+                "methods": "GET",
+                "backends": [
+                    "http://172.17.0.2/",
+                    "http://172.17.0.3/"
+                ],
+                "proxyMethod": "round-robin"
+            },
+            {
+                "path": "/example2",
+                "methods": "GET",
+                "backends": [
+                    "http://172.17.0.4/",
+                    "http://172.17.0.5/"
+                ],
+                "proxyMethod": "anycast"
+            }
+        ]
+    }
+]
