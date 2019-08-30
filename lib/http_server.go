@@ -76,19 +76,3 @@ func (srv *Server) makeHandlerFunc(f func(http.ResponseWriter, *http.Request)) f
 		}
 	}
 }
-
-func main() {
-	srv := New(&http.Server{
-		Addr:         ":8080",
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  15 * time.Second,
-	})
-
-	srv.HandleFunc("GET", "/", func(w http.ResponseWriter, request *http.Request) {
-		time.Sleep(3 * time.Second)
-		w.Write([]byte("Some data"))
-	})
-
-	srv.ListenAndServe()
-}

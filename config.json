@@ -23,7 +23,7 @@
         ]
     },
     {
-        "interface": ":8081",
+        "interface": ":8888",
         "upstreams": [
             {
                 "path": "/example1",
