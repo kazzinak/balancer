@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 )
 
 type RoundRobin struct {
@@ -35,34 +36,28 @@ func (r *RoundRobin) Get() backend {
 	return backend
 }
 
-func balancerAnycast(writer http.ResponseWriter, request *http.Request, backends []backend) {
+func anycast(writer http.ResponseWriter, request *http.Request, backends []backend) {
+	retries := 1
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	anycastCh := make(chan []byte)
-	for _, url := range backends {
-		go func(url backend, ctx context.Context) {
-			proxyReq, err := http.NewRequest(request.Method, string(url), request.Body)
 
-			client := http.Client{}
+	for i := 0; i < retries; i++ {
+		for _, url := range backends {
+			go func(url backend, ctx context.Context) {
 
-			resp, err := client.Do(proxyReq)
-			if err != nil {
-				http.Error(writer, err.Error(), http.StatusBadGateway)
-				return
-			}
-			defer resp.Body.Close()
+				respBody, err := requester(request, url)
+				if err != nil {
+					log.Println(err)
+				}
 
-			respBody, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				return
-			}
-			select {
-			case <-ctx.Done():
-				return
-			case anycastCh <- []byte(respBody):
-
-			}
-		}(url, ctx)
+				select {
+				case <-ctx.Done():
+					return
+				case anycastCh <- []byte(respBody):
+				}
+			}(url, ctx)
+		}
 	}
 	select {
 	case respBody := <-anycastCh:
@@ -72,30 +67,46 @@ func balancerAnycast(writer http.ResponseWriter, request *http.Request, backends
 
 }
 
-func balancerRoundRobin(writer http.ResponseWriter, request *http.Request, backends []backend, r *RoundRobin) {
+func roundRobin(writer http.ResponseWriter, request *http.Request, backends []backend, r *RoundRobin) {
 	r.backends = backends
+	var respBody []byte
+	var err error
 
-	log.Println(r.current)
-	url := r.Get()
-	log.Println(r.current)
+	for range backends {
+		url := r.Get()
+		fmt.Fprintf(writer, string(url))
+		respBody, err = requester(request, url)
+		if err != nil {
+			log.Println(err)
+		} else {
+			break
+		}
+	}
+	_, err = writer.Write(respBody)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusBadGateway)
+	}
+}
 
-	fmt.Fprintf(writer, string(url))
+func requester(request *http.Request, url backend) ([]byte, error) {
 
 	proxyReq, err := http.NewRequest(request.Method, string(url), request.Body)
 
-	client := http.Client{}
+	client := http.Client{
+		Timeout: time.Second * 10,
+	}
 
 	resp, err := client.Do(proxyReq)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusBadGateway)
-		return
+		log.Println(err)
+		return []byte(""), err
 	}
 	defer resp.Body.Close()
 
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return
+		return []byte(""), err
 	}
 
-	writer.Write([]byte(respBody))
+	return []byte(respBody), nil
 }

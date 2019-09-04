@@ -12,8 +12,8 @@ import (
 
 var (
 	version        = "0.1"
-	host           string
 	configFilePath string
+	isDaemon       = false
 )
 
 func main() {
@@ -35,7 +35,24 @@ func main() {
 					Usage:       "path to config file",
 					Destination: &configFilePath,
 				},
+				cli.BoolFlag{
+					Name:        "daemon, d",
+					Usage:       "daemon flag",
+					Destination: &isDaemon,
+				},
 			},
+		},
+		{
+			Name:      "stop",
+			Usage:     "stop command",
+			UsageText: "main stop",
+			Action:    stop,
+		},
+		{
+			Name:      "reload",
+			Usage:     "reload command",
+			UsageText: "reload balancer",
+			Action:    reload,
 		},
 	}
 	err := app.Run(os.Args)
@@ -46,5 +63,13 @@ func main() {
 }
 
 func run(c *cli.Context) error {
-	return lib.Run(configFilePath)
+	return lib.Run(configFilePath, isDaemon)
+}
+
+func stop(c *cli.Context) error {
+	return lib.StopServer()
+}
+
+func reload(c *cli.Context) error {
+	return lib.ReloadServer()
 }

@@ -48,8 +48,9 @@ func getConfig(configFilePath string) ([]balancerConfig, error) {
 	config := []balancerConfig{}
 
 	if configFilePath == "" {
-		configFilePath = "config.json"
+		configFilePath = os.Getenv("HOME") + "/config.json"
 	}
+	log.Println(configFilePath)
 
 	configFile, err := os.Open(configFilePath)
 	if err != nil {
